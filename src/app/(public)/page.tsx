@@ -13,8 +13,8 @@ export default async function HomePage() {
             </p>
             <pre className="overflow-x-auto rounded-md bg-muted p-4 text-sm">
                 {`curl -X PUT https://files.baree.be/ \\
-  -H 'Authorization: Bearer $UPLOAD_TOKEN' \\
-  -d '{"filename": "login-flow.png", "size": '$(wc -c < login-flow.png)'}'
+  -H "Authorization: Bearer $UPLOAD_TOKEN" \\
+  -d "{\\"filename\\": \\"login-flow.png\\", \\"size\\": $(wc -c < login-flow.png)}"
 
 # => { "upload_url": "...", "public_url": "..." }
 curl -T login-flow.png '<upload_url>'
