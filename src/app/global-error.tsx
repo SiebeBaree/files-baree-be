@@ -1,14 +1,7 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
-import { useEffect } from "react";
-
 // Replaces the root layout when it crashes, so it must render its own <html> and stay dependency-free.
-export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
-    useEffect(() => {
-        Sentry.captureException(error);
-    }, [error]);
-
+export default function GlobalError() {
     return (
         <html lang="en">
             <body
@@ -20,7 +13,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
                 }}
             >
                 <h1>Something went wrong</h1>
-                <p>The error has been reported. Please reload the page.</p>
+                <p>Please reload the page.</p>
             </body>
         </html>
     );

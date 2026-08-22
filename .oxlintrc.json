@@ -20,6 +20,5 @@
         "import/no-cycle": "error",
         "react/rules-of-hooks": "error",
         "react/exhaustive-deps": "error"
-    },
-    "ignorePatterns": ["src/lib/db/migrations"]
+    }
 }

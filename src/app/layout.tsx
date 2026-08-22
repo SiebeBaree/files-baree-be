@@ -4,11 +4,8 @@ import { headers } from "next/headers";
 
 import "./globals.css";
 
-import { Toaster } from "@/components/ui/sonner";
 import { siteDescription, siteName, siteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
-
-import { Providers } from "./providers";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -44,8 +41,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     return (
         <html lang="en" className={cn("font-sans", geist.variable)}>
             <body className="min-h-dvh antialiased">
-                <Providers>{children}</Providers>
-                <Toaster />
+                {children}
                 <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: jsonLd }} />
             </body>
         </html>

@@ -1,6 +1,8 @@
 # files-baree-be
 
-<TODO: write a one or two paragraph description of the app here, including what it does and what problem it solves.>
+files.baree.be is a personal file host for sharing files in GitHub PRs. An agent PUTs a filename and byte size to `/` with a bearer token, gets back `upload_url` (a presigned R2 PUT) and `public_url`, uploads the bytes straight to Cloudflare R2 and links `public_url` in the PR. Names survive the trip slugified with a random hex suffix, so `login-flow.png` becomes `login-flow-b6f9ac.png`.
+
+The app is a Next.js project on Vercel with two route handlers and a landing page. The file itself never passes through the app (Vercel caps request bodies at 4.5 MB): the upload route only validates and presigns, and `GET /<key>` serves a file by redirecting to a short-lived presigned R2 GET so the bucket stays private. The 200 MB limit is enforced by signing Content-Length into the upload URL. Error responses are written for the AI agents doing the uploads: every one states what was wrong and how to fix it.
 
 ## Principles
 
@@ -14,27 +16,28 @@
 
 ## Glossary
 
-- **Feature**: a vertical slice under `features/` owning its schema, queries, actions and components. Client components import siblings directly; the feature barrel is server-only.
+- **Feature**: a vertical slice under `features/` owning its schema and logic. Client components import siblings directly; the feature barrel is server-only.
 - **Page**: a route file under `app/`. Thin on purpose: it awaits queries and renders feature components. A new page should contain nothing else.
-- **Server action**: a mutation built with the `createAction` factory. Adding a server action means schema validation, rate limiting, logging and error handling come along automatically.
-- **Query**: a server-side read in a feature's `queries.ts`, called from pages. Reads are queries, writes are server actions.
-- **Schema**: the Zod schema in a feature. One schema validates the form on the client and the server action on the server.
+- **Route handler**: an API endpoint under `app/api`. It authenticates, validates with the feature's schema and answers JSON. Error bodies are the API's documentation for agents, keep them specific and actionable.
+- **Schema**: the Zod schema in a feature. One schema validates the request; its error messages are part of the API contract.
 
-## Observability: three tools, three jobs
+## Observability
 
-PostHog answers "what are users doing" (add custom events to the typed catalog in `lib/analytics.ts`, never call capture directly, keep properties anonymous). Sentry answers "what broke" (errors only, lean, no logs, no replay). Axiom answers "what happened around it" (canonical lines only, no payload dumps). Do not cross the streams: an expected failure is not a Sentry event and a debug print is not an Axiom line.
+Vercel's request and function logs are the only observability. Do not add logging, analytics or error tracking SDKs without a demonstrated need.
 
 ## Testing: when and what
 
-Test the things that can be wrong in interesting ways. Zod schema edges, real logic in lib and dumb components with behavior worth pinning get colocated Vitest tests. Server components and server actions have no honest unit-test story, so the user journey in `e2e/` is where they get verified against a production build and a real database. Do not write smoke tests that assert a page renders, regression tests for deleted features or tests that mock half the app; if a unit test needs heavy infrastructure mocking, the seam is wrong, move the logic or rely on e2e. A fixed bug earns a regression test only when the bug was real logic, not glue.
+Test the things that can be wrong in interesting ways. Zod schema edges and real logic like object key generation get colocated Vitest tests. Route handlers and presigning have no honest unit-test story (mocking R2 proves nothing), so verify them against a deployed preview with curl. Do not write smoke tests that assert a page renders, regression tests for deleted features or tests that mock half the app; if a unit test needs heavy infrastructure mocking, the seam is wrong, move the logic. A fixed bug earns a regression test only when the bug was real logic, not glue.
 
 ## Things you need to know
 
 - Every page renders dynamically because the CSP nonce requires a per-request render. `await connection()` is the explicit opt-in; awaiting a database call does not prevent static prerendering. Do not remove it, do not add static rendering back.
-- The strict CSP means new external origins must be added deliberately. PostHog and Sentry traffic is proxied through our own origin precisely so the browser never talks to third parties.
+- The strict CSP means new external origins must be added deliberately.
+- Uploads go straight to R2 via presigned PUT URLs because Vercel caps request bodies at 4.5 MB. The 200 MB limit exists because Content-Length is signed into the URL. Do not "simplify" this into an upload proxied through the app.
+- The public upload API is `PUT /`, rewritten in `proxy.ts` to the internal `/api/upload` handler, because a route handler cannot share the root path with the landing page.
+- The bucket needs no public access. `GET /<key>` redirects to a presigned GET that also pins `response-content-type` from the extension, so the Content-Type the uploader sent (curl -T sends none) does not matter.
+- There is no auth on pages by design. The upload API authenticates with the `UPLOAD_TOKEN` bearer token, compared timing-safe, with a length floor in the env schema.
 - Importing server code into a client component is a build error via `server-only`. Type-only imports across that boundary are safe and lint-enforced (`import type`), and load-bearing: dropping the `type` keyword ships server code to the browser.
 - Builds without an environment use `SKIP_ENV_VALIDATION=1`. Never weaken a required env var to optional to make a build pass; the fail-fast is the point.
 - Formatting is oxfmt's job, including import order and Tailwind class order. Never hand-format or reorder imports.
-- shadcn components under `components/ui` are generated. Add or update them with the shadcn CLI, do not hand-edit beyond what a change genuinely requires.
-- There is no auth by design (the provider choice varies per project). The `(app)` route group marks where it slots in.
-- The e2e todos suite needs `DATABASE_URL`, skips itself without it and deletes its own `e2e %` rows.
+- shadcn components are generated into `components/ui` with the shadcn CLI, do not hand-edit them beyond what a change genuinely requires. None are installed right now; add them with the CLI when UI needs them.
