@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { createUploadSchema, MAX_FILE_SIZE_BYTES } from "./schema";
+import { createUploadSchema, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "./schema";
 
 function firstError(input: unknown, field: "filename" | "size") {
     const result = createUploadSchema.safeParse(input);
@@ -30,7 +30,7 @@ describe("createUploadSchema", () => {
     it("names both the actual size and the limit when the file is too large", () => {
         const message = firstError({ filename: "a.png", size: MAX_FILE_SIZE_BYTES + 1 }, "size");
         expect(message).toContain(String(MAX_FILE_SIZE_BYTES + 1));
-        expect(message).toContain("200 MB");
+        expect(message).toContain(`${MAX_FILE_SIZE_MB} MB`);
     });
 
     it("rejects an empty filename with an example", () => {

@@ -2,7 +2,7 @@
 
 files.baree.be is a personal file host for sharing files in GitHub PRs. An agent PUTs a filename and byte size to `/` with a bearer token, gets back `upload_url` (a presigned R2 PUT) and `public_url`, uploads the bytes straight to Cloudflare R2 and links `public_url` in the PR. Names survive the trip slugified with a random hex suffix, so `login-flow.png` becomes `login-flow-b6f9ac.png`.
 
-The app is a Next.js project on Vercel with two route handlers and a landing page. The file itself never passes through the app (Vercel caps request bodies at 4.5 MB): the upload route only validates and presigns, and `GET /<key>` serves a file by redirecting to a short-lived presigned R2 GET so the bucket stays private. The 200 MB limit is enforced by signing Content-Length into the upload URL. Error responses are written for the AI agents doing the uploads: every one states what was wrong and how to fix it.
+The app is a Next.js project on Vercel with two route handlers and a landing page. The file itself never passes through the app (Vercel caps request bodies at 4.5 MB): the upload route only validates and presigns, and `GET /<key>` serves a file by redirecting to a short-lived presigned R2 GET so the bucket stays private. The 400 MB limit is enforced by signing Content-Length into the upload URL. Error responses are written for the AI agents doing the uploads: every one states what was wrong and how to fix it.
 
 ## Principles
 
@@ -33,7 +33,7 @@ Test the things that can be wrong in interesting ways. Zod schema edges and real
 
 - Every page renders dynamically because the CSP nonce requires a per-request render. `await connection()` is the explicit opt-in; awaiting a database call does not prevent static prerendering. Do not remove it, do not add static rendering back.
 - The strict CSP means new external origins must be added deliberately.
-- Uploads go straight to R2 via presigned PUT URLs because Vercel caps request bodies at 4.5 MB. The 200 MB limit exists because Content-Length is signed into the URL. Do not "simplify" this into an upload proxied through the app.
+- Uploads go straight to R2 via presigned PUT URLs because Vercel caps request bodies at 4.5 MB. The 400 MB limit exists because Content-Length is signed into the URL. Do not "simplify" this into an upload proxied through the app.
 - The public upload API is `PUT /`, rewritten in `proxy.ts` to the internal `/api/upload` handler, because a route handler cannot share the root path with the landing page.
 - The bucket needs no public access. `GET /<key>` redirects to a presigned GET that also pins `response-content-type` from the extension, so the Content-Type the uploader sent (curl -T sends none) does not matter.
 - There is no auth on pages by design. The upload API authenticates with the `UPLOAD_TOKEN` bearer token, compared timing-safe, with a length floor in the env schema.

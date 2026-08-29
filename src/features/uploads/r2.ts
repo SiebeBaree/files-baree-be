@@ -16,7 +16,7 @@ function signedObjectUrl(key: string, ttlSeconds: number) {
 
 /**
  * Presigns a PUT to R2. The caller uploads straight to R2 because Vercel caps request bodies at 4.5 MB, far below our
- * 200 MB limit. Content-Length is part of the signature (allHeaders opts it in, aws4fetch skips it by default), so R2
+ * 400 MB limit. Content-Length is part of the signature (allHeaders opts it in, aws4fetch skips it by default), so R2
  * rejects any upload that is not exactly `size` bytes. That signature is what enforces the size limit.
  */
 export async function presignUpload(key: string, size: number) {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
+export const MAX_FILE_SIZE_MB = 400;
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 /**
  * Body of PUT /. The error messages are written for the AI agents that call this API: each one states what was wrong
@@ -16,6 +17,6 @@ export const createUploadSchema = z.object({
         .positive("size must be greater than 0 bytes. Get the exact size with: wc -c < yourfile")
         .max(MAX_FILE_SIZE_BYTES, {
             error: (issue) =>
-                `size is ${String(issue.input)} bytes but the limit is ${MAX_FILE_SIZE_BYTES} bytes (200 MB). This file is too large to upload here.`,
+                `size is ${String(issue.input)} bytes but the limit is ${MAX_FILE_SIZE_BYTES} bytes (${MAX_FILE_SIZE_MB} MB). This file is too large to upload here.`,
         }),
 });

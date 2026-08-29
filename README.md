@@ -26,7 +26,7 @@ The app is a Next.js project on Vercel with two route handlers and a landing pag
 Details worth knowing:
 
 - Filenames are slugified with a random hex suffix, so `login-flow.png` becomes `login-flow-b6f9ac.png`.
-- The 200 MB limit is enforced by signing Content-Length into the upload URL. Uploading a different byte count fails with a 403 from R2.
+- The 400 MB limit is enforced by signing Content-Length into the upload URL. Uploading a different byte count fails with a 403 from R2.
 - Error responses are written for the AI agents calling the API. Every one states what was wrong and how to fix it, because the JSON body is all the context an agent gets.
 - Downloads need no auth. Uploading is protected by a bearer token, compared timing-safe.
 
