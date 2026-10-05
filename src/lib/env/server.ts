@@ -9,7 +9,7 @@ const isProd = process.env.NODE_ENV === "production";
  * instead of a leaked secret.
  *
  * Everything R2 plus UPLOAD_TOKEN is always required: the app is an upload service and cannot function without them.
- * UPLOAD_TOKEN has a length floor so a weak token fails the deploy instead of guarding the endpoint badly. APP_URL is
+ * UPLOAD_TOKEN guards the API and signs drive sessions, so it has a length floor: a weak token fails the deploy. APP_URL is
  * required in production only, dev falls back to localhost.
  */
 export const env = createEnv({

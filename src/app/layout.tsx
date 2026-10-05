@@ -1,13 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
 import { headers } from "next/headers";
 
 import "./globals.css";
 
 import { siteDescription, siteName, siteUrl } from "@/lib/site";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
     metadataBase: siteUrl,
@@ -39,7 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     }).replaceAll("<", "\\u003c");
 
     return (
-        <html lang="en" className={cn("font-sans", geist.variable)}>
+        <html lang="en">
             <body className="min-h-dvh antialiased">
                 {children}
                 <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: jsonLd }} />
