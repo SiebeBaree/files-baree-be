@@ -1,26 +1,17 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createUploadSchema, makeObjectKey, presignUpload } from "@/features/uploads";
+import { tokenMatches } from "@/features/auth";
+import { createUpload, createUploadSchema } from "@/features/files";
 import { env } from "@/lib/env/server";
 import { siteUrl } from "@/lib/site";
 
 const EXAMPLE_REQUEST = `curl --fail-with-body -X PUT ${siteUrl.href} -H 'Authorization: Bearer <UPLOAD_TOKEN>' -d '{"filename": "login-flow.png", "size": 48213}'`;
 
-// Timing-safe so the token cannot be guessed byte by byte from response times.
-function isAuthorized(request: NextRequest) {
-    const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
-    if (!token) return false;
-    const expected = Buffer.from(env.UPLOAD_TOKEN);
-    const received = Buffer.from(token);
-    return received.length === expected.length && timingSafeEqual(received, expected);
-}
-
-// The public API is PUT /; proxy.ts rewrites that here because a route handler cannot share / with the landing page.
+// The public API is PUT /; proxy.ts rewrites that here because a route handler cannot share / with the drive page.
 export async function PUT(request: NextRequest) {
-    if (!isAuthorized(request)) {
+    const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
+    if (!token || !tokenMatches(token, env.UPLOAD_TOKEN)) {
         return NextResponse.json(
             {
                 error: "Unauthorized: missing or invalid bearer token.",
@@ -55,11 +46,16 @@ export async function PUT(request: NextRequest) {
         );
     }
 
-    const { filename, size } = parsed.data;
-    const key = makeObjectKey(filename);
+    const upload = await createUpload(parsed.data);
+    if ("error" in upload) {
+        return NextResponse.json(
+            {
+                error: upload.error,
+                fix: `Do not retry before the reset. Tell the user, who can free space by deleting files at ${siteUrl.href}.`,
+            },
+            { status: 429 },
+        );
+    }
 
-    return NextResponse.json({
-        upload_url: await presignUpload(key, size),
-        public_url: new URL(`/${key}`, siteUrl).href,
-    });
+    return NextResponse.json({ upload_url: upload.uploadUrl, public_url: upload.publicUrl });
 }

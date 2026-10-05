@@ -17,6 +17,10 @@ const EXTENSION_CONTENT_TYPES: Record<string, string> = {
     zip: "application/zip",
 };
 
+// Everything makeObjectKey produces matches this. Keys from outside are checked against it before they reach an R2 URL,
+// where a "/" or ".." would point somewhere else in the bucket or account.
+export const OBJECT_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,90}(\.[a-z0-9]{1,16})?$/;
+
 /** "Login Flow (v2).PNG" becomes "login-flow-v2-b6f9ac.png": slugified base, random hex suffix, lowercased extension. */
 export function makeObjectKey(filename: string): string {
     const dot = filename.lastIndexOf(".");

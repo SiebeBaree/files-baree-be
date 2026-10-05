@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { env } from "@/lib/env/server";
+
 /**
  * Runs on every page request (see matcher below) to set a CSP with a per-request nonce. Next.js reads the
  * Content-Security-Policy request header and applies the nonce to every script it renders, so script-src needs no
  * 'unsafe-inline'. This forces dynamic rendering on all pages, an accepted trade-off for a strict CSP.
  */
 export function proxy(request: NextRequest) {
-    // The upload API is PUT / but a route handler cannot share the root path with the landing page, so the public
+    // The upload API is PUT / but a route handler cannot share the root path with the drive page, so the public
     // method lands here and rewrites to the internal handler.
     if (request.method === "PUT" && request.nextUrl.pathname === "/") {
         return NextResponse.rewrite(new URL("/api/upload", request.url));
@@ -14,6 +16,8 @@ export function proxy(request: NextRequest) {
 
     const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
     const isDev = process.env.NODE_ENV === "development";
+    // Files live on R2: GET /<key> redirects there for previews and the drive uploads straight to it.
+    const r2 = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
     const csp = [
         "default-src 'self'",
@@ -24,10 +28,12 @@ export function proxy(request: NextRequest) {
         // inline style attributes, which nonces cannot cover. Script injection stays fully blocked, which is what
         // matters.
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' blob: data:",
+        `img-src 'self' blob: data: ${r2}`,
+        `media-src 'self' ${r2}`,
+        `frame-src 'self' ${r2}`,
         "font-src 'self'",
-        // The browser only talks to our origin. ws: is dev-only (HMR).
-        `connect-src 'self'${isDev ? " ws:" : ""}`,
+        // The browser only talks to our origin and R2. ws: is dev-only (HMR).
+        `connect-src 'self' ${r2}${isDev ? " ws:" : ""}`,
         "worker-src 'self' blob:",
         "object-src 'none'",
         "base-uri 'self'",
