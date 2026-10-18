@@ -3,6 +3,7 @@
 import { Ellipsis, Link } from "lucide-react";
 
 import { formatBytes } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import { copyLink } from "./copy-link";
 import { formatDay } from "./file-info";
@@ -10,6 +11,7 @@ import { Expiry, FileName } from "./file-labels";
 import { FileMenu } from "./file-menu";
 import { FileThumb } from "./file-thumb";
 import type { StoredFile } from "./list-objects";
+import { displayName, retentionOf } from "./object-key";
 
 type Props = {
     files: StoredFile[];
@@ -33,11 +35,16 @@ export function FileGrid({ files, now, onOpen, onDelete }: Props) {
                 <li key={file.key} className="group relative min-w-0">
                     <button
                         type="button"
-                        aria-label={`Open ${file.key}`}
+                        aria-label={`Open ${displayName(file.key)}`}
                         onClick={() => onOpen(file.key)}
                         className="absolute inset-0 z-10 rounded-md outline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
                     />
-                    <div className="relative aspect-16/10 overflow-hidden rounded-md bg-muted after:absolute after:inset-0 after:rounded-md after:shadow-[inset_0_0_0_1px_rgb(55_53_47/0.09)] after:transition-colors group-hover:after:bg-foreground/5">
+                    <div
+                        className={cn(
+                            "relative aspect-16/10 overflow-hidden rounded-md bg-muted after:absolute after:inset-0 after:rounded-md after:shadow-[inset_0_0_0_1px_rgb(55_53_47/0.09)] after:transition-colors group-hover:after:bg-foreground/5",
+                            retentionOf(file.key) === "forever" && "after:inset-ring-2 after:inset-ring-forever",
+                        )}
+                    >
                         <FileThumb fileKey={file.key} variant="card" />
                     </div>
                     <div className={actions}>
@@ -65,7 +72,7 @@ export function FileGrid({ files, now, onOpen, onDelete }: Props) {
                             {formatBytes(file.size)}
                             {now !== undefined && ` · ${formatDay(file.uploadedAt, now)}`}
                         </span>
-                        {now !== undefined && <Expiry uploadedAt={file.uploadedAt} now={now} />}
+                        {now !== undefined && <Expiry fileKey={file.key} uploadedAt={file.uploadedAt} now={now} />}
                     </div>
                 </li>
             ))}

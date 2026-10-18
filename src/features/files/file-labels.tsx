@@ -3,6 +3,7 @@ import { FileText, Hourglass, Image, Layers, type LucideIcon, Package, SquarePla
 import { cn } from "@/lib/utils";
 
 import { daysLeft, expiresAt, formatDay, type KindFilter } from "./file-info";
+import { displayName } from "./object-key";
 
 export const KIND_LABELS: Record<KindFilter, string> = {
     all: "All files",
@@ -20,8 +21,9 @@ export const KIND_ICONS: Record<KindFilter, LucideIcon> = {
     other: Package,
 };
 
-/** Truncates the name but keeps the extension visible. */
-export function FileName({ name, className }: { name: string; className?: string }) {
+/** Truncates the name but keeps the extension visible. Takes a key or a local filename. */
+export function FileName({ name: keyOrName, className }: { name: string; className?: string }) {
+    const name = displayName(keyOrName);
     const dot = name.lastIndexOf(".");
     const base = dot > 0 ? name.slice(0, dot) : name;
     const extension = dot > 0 ? name.slice(dot) : "";
@@ -34,15 +36,19 @@ export function FileName({ name, className }: { name: string; className?: string
 }
 
 /** Days until the lifecycle rule deletes the file, orange for the last ten. */
-export function Expiry({ uploadedAt, now }: { uploadedAt: Date; now: number }) {
-    const days = daysLeft(uploadedAt, now);
+export function Expiry({ fileKey, uploadedAt, now }: { fileKey: string; uploadedAt: Date; now: number }) {
+    const expires = expiresAt(fileKey, uploadedAt);
+    const days = expires && daysLeft(expires, now);
     return (
         <span
-            title={`Expires ${formatDay(expiresAt(uploadedAt), now)}`}
-            className={cn("flex items-center gap-[3px]", days <= 10 ? "text-warning" : "text-faint")}
+            title={expires ? `Expires ${formatDay(expires, now)}` : "Never expires"}
+            className={cn(
+                "flex items-center gap-[3px]",
+                days !== undefined && days <= 10 ? "text-warning" : "text-faint",
+            )}
         >
             <Hourglass className="size-3" />
-            {days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"}`}
+            {days === undefined ? "never" : days === 0 ? "today" : `${days} ${days === 1 ? "day" : "days"}`}
         </span>
     );
 }

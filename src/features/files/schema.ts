@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { RETENTIONS } from "./object-key";
+
 export const MAX_FILE_SIZE_MB = 500;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
@@ -19,6 +21,11 @@ export const createUploadSchema = z.object({
             error: (issue) =>
                 `size is ${String(issue.input)} bytes but the limit is ${MAX_FILE_SIZE_BYTES} bytes (${MAX_FILE_SIZE_MB} MB). This file is too large to upload here.`,
         }),
+    retention: z
+        .enum(RETENTIONS, {
+            error: `retention must be one of ${RETENTIONS.map((retention) => `"${retention}"`).join(", ")}. Leave it out to keep the file for 30 days.`,
+        })
+        .default("30d"),
 });
 
 export type CreateUpload = z.infer<typeof createUploadSchema>;

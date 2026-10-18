@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { deleteFile } from "./actions";
+import { displayName } from "./object-key";
 
 /** Confirms before deleting, because a deleted file breaks every PR that links it. */
 export function DeleteDialog({ fileKey, onClose }: { fileKey: string | undefined; onClose: () => void }) {
@@ -25,7 +26,7 @@ export function DeleteDialog({ fileKey, onClose }: { fileKey: string | undefined
         startTransition(async () => {
             const result = await deleteFile(fileKey).catch(() => ({ error: "Could not delete the file. Try again." }));
             if (result?.error) toast.error(result.error);
-            else toast.success(`Deleted ${fileKey}`);
+            else toast.success(`Deleted ${displayName(fileKey)}`);
             onClose();
         });
     }
@@ -34,7 +35,7 @@ export function DeleteDialog({ fileKey, onClose }: { fileKey: string | undefined
         <AlertDialog open={fileKey !== undefined} onOpenChange={(open) => !open && !pending && onClose()}>
             <AlertDialogContent className="w-[300px] gap-0 rounded-[10px] px-5 pt-[22px] pb-4 text-center shadow-md ring-0">
                 <AlertDialogTitle className="text-[15px] leading-snug font-semibold [overflow-wrap:anywhere]">
-                    Delete {shown}?
+                    Delete {shown && displayName(shown)}?
                 </AlertDialogTitle>
                 <AlertDialogDescription className="mt-1.5 mb-[18px] text-muted-foreground">
                     The link stops working in every PR that uses it.

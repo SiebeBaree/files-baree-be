@@ -12,6 +12,7 @@ import { FileMenu } from "./file-menu";
 import { FileThumb } from "./file-thumb";
 import { IconButton } from "./icon-button";
 import type { StoredFile } from "./list-objects";
+import { displayName, retentionOf } from "./object-key";
 
 type Props = {
     files: StoredFile[];
@@ -58,12 +59,18 @@ export function FileTable({ files, now, onOpen, onDelete }: Props) {
                     >
                         <button
                             type="button"
-                            aria-label={`Open ${file.key}`}
+                            aria-label={`Open ${displayName(file.key)}`}
                             onClick={() => onOpen(file.key)}
                             className="absolute inset-0 z-10 focus-visible:outline-2 focus-visible:outline-ring"
                         />
                         <span className="flex min-w-0 items-center gap-2.5 font-medium text-foreground">
-                            <span className="relative grid h-6 w-9 shrink-0 place-items-center overflow-hidden rounded-[3px] bg-muted after:absolute after:inset-0 after:rounded-[3px] after:shadow-[inset_0_0_0_1px_rgb(55_53_47/0.09)]">
+                            <span
+                                className={cn(
+                                    "relative grid h-6 w-9 shrink-0 place-items-center overflow-hidden rounded-[3px] bg-muted after:absolute after:inset-0 after:rounded-[3px] after:shadow-[inset_0_0_0_1px_rgb(55_53_47/0.09)]",
+                                    retentionOf(file.key) === "forever" &&
+                                        "after:inset-ring-2 after:inset-ring-forever",
+                                )}
+                            >
                                 <FileThumb fileKey={file.key} variant="mini" />
                             </span>
                             <span className="min-w-0">
@@ -77,7 +84,7 @@ export function FileTable({ files, now, onOpen, onDelete }: Props) {
                         <span className="max-sm:hidden">{formatBytes(file.size)}</span>
                         <span className="max-sm:hidden">{now !== undefined && formatDay(file.uploadedAt, now)}</span>
                         <span className="max-sm:hidden">
-                            {now !== undefined && <Expiry uploadedAt={file.uploadedAt} now={now} />}
+                            {now !== undefined && <Expiry fileKey={file.key} uploadedAt={file.uploadedAt} now={now} />}
                         </span>
                         <span className="relative z-20 flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 group-has-data-[state=open]:opacity-100 pointer-coarse:opacity-100">
                             <button

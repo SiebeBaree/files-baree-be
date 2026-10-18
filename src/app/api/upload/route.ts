@@ -6,7 +6,7 @@ import { createUpload, createUploadSchema } from "@/features/files";
 import { env } from "@/lib/env/server";
 import { siteUrl } from "@/lib/site";
 
-const EXAMPLE_REQUEST = `curl --fail-with-body -X PUT ${siteUrl.href} -H 'Authorization: Bearer <UPLOAD_TOKEN>' -d '{"filename": "login-flow.png", "size": 48213}'`;
+const EXAMPLE_REQUEST = `curl --fail-with-body -X PUT ${siteUrl.href} -H 'Authorization: Bearer <UPLOAD_TOKEN>' -d '{"filename": "login-flow.png", "size": 48213, "retention": "30d"}'`;
 
 // The public API is PUT /; proxy.ts rewrites that here because a route handler cannot share / with the drive page.
 export async function PUT(request: NextRequest) {
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json(
             {
                 error: "Request body is not valid JSON.",
-                fix: `Send a JSON object with filename and size, where size is the file's exact byte count (wc -c < yourfile). Example: ${EXAMPLE_REQUEST}`,
+                fix: `Send a JSON object with filename, size and optionally retention, where size is the file's exact byte count (wc -c < yourfile). Example: ${EXAMPLE_REQUEST}`,
             },
             { status: 400 },
         );
@@ -51,11 +51,15 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json(
             {
                 error: upload.error,
-                fix: `Do not retry before the reset. Tell the user, who can free space by deleting files at ${siteUrl.href}.`,
+                fix: `Do not retry. Tell the user, who can free space by deleting files at ${siteUrl.href}.`,
             },
-            { status: 429 },
+            { status: 507 },
         );
     }
 
-    return NextResponse.json({ upload_url: upload.uploadUrl, public_url: upload.publicUrl });
+    return NextResponse.json({
+        upload_url: upload.uploadUrl,
+        public_url: upload.publicUrl,
+        expires_at: upload.expiresAt?.toISOString() ?? null,
+    });
 }

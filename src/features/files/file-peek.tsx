@@ -25,7 +25,7 @@ import { KIND_ICONS } from "./file-labels";
 import { FilePreview } from "./file-preview";
 import { IconButton } from "./icon-button";
 import type { StoredFile } from "./list-objects";
-import { contentTypeFor } from "./object-key";
+import { contentTypeFor, displayName } from "./object-key";
 
 const KIND_NOUNS: Record<FileKind, string> = { image: "image", video: "video", document: "document", other: "file" };
 
@@ -79,7 +79,8 @@ export function FilePeek({ file, files, now, onOpen, onClose, onDelete }: Props)
 
     const kind = shown ? fileKind(shown.key) : "other";
     const extension = shown?.key.includes(".") ? shown.key.slice(shown.key.lastIndexOf(".") + 1).toUpperCase() : "";
-    const days = shown ? daysLeft(shown.uploadedAt, now) : 0;
+    const expires = shown && expiresAt(shown.key, shown.uploadedAt);
+    const days = expires && daysLeft(expires, now);
 
     return (
         <Dialog open={file !== undefined} onOpenChange={(open) => !open && onClose()}>
@@ -128,7 +129,7 @@ export function FilePeek({ file, files, now, onOpen, onClose, onDelete }: Props)
                             </div>
                             <div className="min-w-0 px-4 pb-6 md:overflow-auto md:px-6 md:pt-1">
                                 <DialogTitle className="mt-1.5 mb-4 text-2xl leading-tight font-bold [overflow-wrap:anywhere]">
-                                    {shown.key}
+                                    {displayName(shown.key)}
                                 </DialogTitle>
                                 <dl>
                                     <Property icon={KIND_ICONS[kind]} label="Type">
@@ -147,10 +148,16 @@ export function FilePeek({ file, files, now, onOpen, onClose, onDelete }: Props)
                                         })}
                                     </Property>
                                     <Property icon={Hourglass} label="Expires">
-                                        {formatDay(expiresAt(shown.uploadedAt), now)}{" "}
-                                        <span className={days <= 10 ? "text-warning" : "text-faint"}>
-                                            {days === 0 ? "today" : `in ${days} ${days === 1 ? "day" : "days"}`}
-                                        </span>
+                                        {expires && days !== undefined ? (
+                                            <>
+                                                {formatDay(expires, now)}{" "}
+                                                <span className={days <= 10 ? "text-warning" : "text-faint"}>
+                                                    {days === 0 ? "today" : `in ${days} ${days === 1 ? "day" : "days"}`}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            "Never"
+                                        )}
                                     </Property>
                                     <Property icon={Link} label="Link">
                                         <button

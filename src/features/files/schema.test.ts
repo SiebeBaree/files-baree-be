@@ -10,9 +10,15 @@ function firstError(input: unknown, field: "filename" | "size") {
 }
 
 describe("createUploadSchema", () => {
-    it("accepts a minimal valid body", () => {
+    it("keeps a file for 30 days unless told otherwise", () => {
         const result = createUploadSchema.parse({ filename: "login-flow.png", size: 48213 });
-        expect(result).toEqual({ filename: "login-flow.png", size: 48213 });
+        expect(result).toEqual({ filename: "login-flow.png", size: 48213, retention: "30d" });
+    });
+
+    it("lists the allowed retentions when given another", () => {
+        const result = createUploadSchema.safeParse({ filename: "a.png", size: 1, retention: "7d" });
+        if (result.success) throw new Error("expected parse to fail");
+        expect(z.flattenError(result.error).fieldErrors.retention?.[0]).toContain('"forever"');
     });
 
     it("tells the agent how to produce a missing size", () => {

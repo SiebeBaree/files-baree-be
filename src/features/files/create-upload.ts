@@ -2,24 +2,29 @@ import "server-only";
 import { formatBytes } from "@/lib/format";
 import { siteUrl } from "@/lib/site";
 
+import { expiresAt } from "./file-info";
 import { makeObjectKey } from "./object-key";
-import { monthlyUsage } from "./quota";
+import { storageUsage } from "./quota";
 import { listFiles, presignUpload } from "./r2";
 import type { CreateUpload } from "./schema";
 
 /**
- * Checks the monthly quota and presigns an upload. The API and the drive both go through here so they enforce the same
- * limits. A full quota is an expected outcome, so it comes back as an error message instead of a throw.
+ * Checks the storage limit and presigns an upload. The API and the drive both go through here so they enforce the
+ * same limits. A full bucket is an expected outcome, so it comes back as an error message instead of a throw.
  */
-export async function createUpload({ filename, size }: CreateUpload) {
-    const { used, limit, resetsAt } = monthlyUsage(await listFiles());
+export async function createUpload({ filename, size, retention }: CreateUpload) {
+    const { used, limit } = storageUsage(await listFiles());
     if (used + size > limit) {
-        const reset = resetsAt.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
         return {
-            error: `Monthly upload limit reached: ${formatBytes(used)} of ${formatBytes(limit)} used and this file is ${formatBytes(size)}. The limit resets on ${reset}.`,
+            error: `Storage is full: ${formatBytes(used)} of ${formatBytes(limit)} used and this file is ${formatBytes(size)}.`,
         };
     }
 
-    const key = makeObjectKey(filename);
-    return { key, uploadUrl: await presignUpload(key, size), publicUrl: new URL(`/${key}`, siteUrl).href };
+    const key = makeObjectKey(filename, retention);
+    return {
+        key,
+        uploadUrl: await presignUpload(key, size),
+        publicUrl: new URL(`/${key}`, siteUrl).href,
+        expiresAt: expiresAt(key, new Date()),
+    };
 }

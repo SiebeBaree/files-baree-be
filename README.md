@@ -9,13 +9,13 @@ When a coding agent finishes a UI change, the proof is a screenshot. An agent wo
 curl -X PUT https://files.baree.be/ \
   -H "Authorization: Bearer $UPLOAD_TOKEN" \
   -d "{\"filename\": \"login-flow.png\", \"size\": $(wc -c < login-flow.png)}"
-# => { "upload_url": "...", "public_url": "https://files.baree.be/login-flow-b6f9ac.png" }
+# => { "upload_url": "...", "public_url": "https://files.baree.be/30d/login-flow-b6f9ac.png", "expires_at": "..." }
 
 # 2. upload the file to upload_url, then share public_url
 curl -T login-flow.png '<upload_url>'
 ```
 
-For the files you upload yourself there is a drive at the root of the site, styled after Notion. Sign in with the same token, then drop, paste or pick files. It copies the link when an upload lands and previews images, videos, PDFs and text. Every file shows when it expires. It works on a phone too.
+For the files you upload yourself there is a drive at the root of the site, styled after Notion. Sign in with the same token, then drop, paste or pick files. It copies the link when an upload lands and previews images, videos, PDFs and text. Every file shows when it expires and files kept forever get a yellow border. It works on a phone too.
 
 ## How it works
 
@@ -30,8 +30,9 @@ The drive uploads the same way as an agent, from the browser: the server presign
 Details worth knowing:
 
 - Filenames are slugified with a random hex suffix, so `login-flow.png` becomes `login-flow-b6f9ac.png`.
+- Files expire after 30 days. Pass `"retention": "60d"`, `"90d"` or `"forever"` to keep one longer. The retention is the first path segment of the key (`30d/login-flow-b6f9ac.png`) because R2 lifecycle rules can only match a prefix.
 - The 500 MB limit is enforced by signing Content-Length into the upload URL. Uploading a different byte count fails with a 403 from R2.
-- Uploads are capped at 50 GB per calendar month (UTC). There is no database: each presign lists the bucket and adds up this month's objects, so deleting a file frees its space. Over the cap, the API answers 429 with the reset date.
+- The bucket is capped at 100 GB. There is no database: each presign lists the bucket and adds up every object, so deleting or expiring a file frees its space. Over the cap, the API answers 507.
 - Error responses are written for the AI agents calling the API. Every one states what was wrong and how to fix it, because the JSON body is all the context an agent gets.
 - File links need no auth, they live in PRs. Uploading needs the bearer token, compared timing-safe. The drive signs in with the same token and keeps a 30 day signed cookie, with no session store. Rotate the token to sign out every browser.
 
@@ -56,7 +57,7 @@ Two settings on the bucket:
     [{ "AllowedOrigins": ["https://files.baree.be"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"] }]
     ```
 
-- A lifecycle rule that deletes objects after 90 days. The drive shows expiry dates based on it.
+- Three lifecycle rules: delete objects with prefix `30d/` after 30 days, `60d/` after 60 and `90d/` after 90. Leave `forever/` without a rule. The drive shows expiry dates based on them.
 
 Then tell your agent about the endpoint and give it the token. For local development run `pnpm install` and `pnpm dev`.
 

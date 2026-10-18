@@ -12,7 +12,7 @@ import { copyText } from "./copy-link";
 import { FILE_KINDS, type KindFilter } from "./file-info";
 import { KIND_ICONS, KIND_LABELS } from "./file-labels";
 import { IconButton } from "./icon-button";
-import type { MonthlyUsage } from "./quota";
+import type { StorageUsage } from "./quota";
 import { MAX_FILE_SIZE_MB } from "./schema";
 
 function Row({
@@ -41,15 +41,13 @@ function Row({
     );
 }
 
-function UsageMeter({ usage }: { usage: MonthlyUsage }) {
+function UsageMeter({ usage }: { usage: StorageUsage }) {
     const ratio = Math.min(usage.used / usage.limit, 1);
-    // resetsAt is midnight UTC on the 1st, so format in UTC or it reads as the last day of the month in the Americas.
-    const reset = usage.resetsAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     return (
         <div className="mx-4 mb-3 text-xs text-muted-foreground">
             <p>
                 <span className="font-medium text-foreground">{formatBytes(usage.used)}</span> of{" "}
-                {formatBytes(usage.limit)} used this month
+                {formatBytes(usage.limit)} used
             </p>
             <div className="my-[7px] h-1 overflow-hidden rounded-full bg-border">
                 <div
@@ -57,9 +55,7 @@ function UsageMeter({ usage }: { usage: MonthlyUsage }) {
                     style={{ width: `${ratio * 100}%` }}
                 />
             </div>
-            <p className="text-faint">
-                Resets {reset} · {MAX_FILE_SIZE_MB} MB max per file
-            </p>
+            <p className="text-faint">{MAX_FILE_SIZE_MB} MB max per file</p>
         </div>
     );
 }
@@ -134,7 +130,7 @@ function TerminalHelp() {
 type Props = {
     kind: KindFilter;
     counts: Record<KindFilter, number>;
-    usage: MonthlyUsage;
+    usage: StorageUsage;
     onKind: (kind: KindFilter) => void;
     onSearch: () => void;
     onUpload: () => void;

@@ -17,7 +17,7 @@ import { FilePeek } from "./file-peek";
 import { FileTable } from "./file-table";
 import { IconButton } from "./icon-button";
 import type { StoredFile } from "./list-objects";
-import type { MonthlyUsage } from "./quota";
+import type { StorageUsage } from "./quota";
 import { MAX_FILE_SIZE_MB } from "./schema";
 import { Sidebar } from "./sidebar";
 import { UploadTray } from "./upload-tray";
@@ -26,7 +26,7 @@ import { useUploads } from "./use-uploads";
 
 type Props = {
     files: StoredFile[];
-    usage: MonthlyUsage;
+    usage: StorageUsage;
     signOut: () => Promise<void>;
 };
 

@@ -17,12 +17,35 @@ const EXTENSION_CONTENT_TYPES: Record<string, string> = {
     zip: "application/zip",
 };
 
-// Everything makeObjectKey produces matches this. Keys from outside are checked against it before they reach an R2 URL,
-// where a "/" or ".." would point somewhere else in the bucket or account.
-export const OBJECT_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,90}(\.[a-z0-9]{1,16})?$/;
+/**
+ * How long a file lives, stored as the first segment of its key: "30d/login-flow-b6f9ac.png". R2 lifecycle rules can
+ * only match a prefix, so the bucket has one rule per prefix doing the deleting and none for forever.
+ */
+export const RETENTIONS = ["30d", "60d", "90d", "forever"] as const;
+export type Retention = (typeof RETENTIONS)[number];
 
-/** "Login Flow (v2).PNG" becomes "login-flow-v2-b6f9ac.png": slugified base, random hex suffix, lowercased extension. */
-export function makeObjectKey(filename: string): string {
+// Everything makeObjectKey produces matches this. Keys from outside are checked against it before they reach an R2 URL,
+// where any other "/" or a ".." would point somewhere else in the bucket or account. The prefix is optional because
+// files uploaded before retention existed live at the root of the bucket.
+export const OBJECT_KEY_PATTERN = new RegExp(
+    `^(?:(${RETENTIONS.join("|")})/)?[a-z0-9][a-z0-9-]{0,90}(\\.[a-z0-9]{1,16})?$`,
+);
+
+/** No lifecycle rule matches the unprefixed keys from before retention existed, so they stay until deleted. */
+export function retentionOf(key: string): Retention {
+    return RETENTIONS.find((retention) => key.startsWith(`${retention}/`)) ?? "forever";
+}
+
+/** The key without its retention prefix: what the drive shows as the file's name. */
+export function displayName(key: string) {
+    return key.slice(key.indexOf("/") + 1);
+}
+
+/**
+ * "Login Flow (v2).PNG" kept for 30 days becomes "30d/login-flow-v2-b6f9ac.png": retention prefix, slugified base,
+ * random hex suffix, lowercased extension.
+ */
+export function makeObjectKey(filename: string, retention: Retention): string {
     const dot = filename.lastIndexOf(".");
     const rawBase = dot > 0 ? filename.slice(0, dot) : filename;
     const rawExtension = dot > 0 ? filename.slice(dot + 1) : "";
@@ -46,7 +69,7 @@ export function makeObjectKey(filename: string): string {
         byte.toString(16).padStart(2, "0"),
     ).join("");
 
-    return extension ? `${base}-${suffix}.${extension}` : `${base}-${suffix}`;
+    return `${retention}/${base}-${suffix}${extension ? `.${extension}` : ""}`;
 }
 
 /** Content type for a key or filename by extension, so browsers render the file instead of downloading it. */

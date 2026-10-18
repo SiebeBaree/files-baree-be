@@ -9,14 +9,14 @@ import { createUpload } from "./create-upload";
 import { TEXT_PREVIEW_BYTES } from "./file-info";
 import { OBJECT_KEY_PATTERN } from "./object-key";
 import { deleteObject, readObjectStart } from "./r2";
-import { createUploadSchema, type CreateUpload } from "./schema";
+import { createUploadSchema } from "./schema";
 
 const SIGNED_OUT = { error: "You are signed out. Reload the page to sign in again." };
 const NOT_FOUND = { error: "That file does not exist." };
 const keySchema = z.string().regex(OBJECT_KEY_PATTERN);
 
 /** Presigns an upload from the drive. The browser then PUTs the file straight to R2, same as the API flow. */
-export async function requestUpload(input: CreateUpload) {
+export async function requestUpload(input: z.input<typeof createUploadSchema>) {
     if (!(await isSignedIn())) return SIGNED_OUT;
     const parsed = createUploadSchema.safeParse(input);
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "This file cannot be uploaded." };

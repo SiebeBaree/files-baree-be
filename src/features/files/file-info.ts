@@ -1,7 +1,12 @@
-import { contentTypeFor } from "./object-key";
+import { contentTypeFor, type Retention, retentionOf } from "./object-key";
 
-// Mirrors the R2 lifecycle rule on the bucket, which does the deleting. The app only uses it to show when files expire.
-export const RETENTION_DAYS = 90;
+// Mirrors the R2 lifecycle rules on the bucket, which do the deleting. The app only uses it to show when files expire.
+export const RETENTION_DAYS: Record<Retention, number | undefined> = {
+    "30d": 30,
+    "60d": 60,
+    "90d": 90,
+    forever: undefined,
+};
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const TEXT_PREVIEW_BYTES = 64 * 1024;
@@ -24,13 +29,15 @@ export function isText(key: string) {
     return type.startsWith("text/") || type === "application/json";
 }
 
-export function expiresAt(uploadedAt: Date) {
-    return new Date(uploadedAt.getTime() + RETENTION_DAYS * DAY_MS);
+/** When the lifecycle rule deletes the file, undefined for files kept forever. */
+export function expiresAt(key: string, uploadedAt: Date) {
+    const days = RETENTION_DAYS[retentionOf(key)];
+    return days === undefined ? undefined : new Date(uploadedAt.getTime() + days * DAY_MS);
 }
 
 /** Whole days until the lifecycle rule deletes the file. 0 means today. */
-export function daysLeft(uploadedAt: Date, now: number) {
-    return Math.max(0, Math.ceil((expiresAt(uploadedAt).getTime() - now) / DAY_MS));
+export function daysLeft(expires: Date, now: number) {
+    return Math.max(0, Math.ceil((expires.getTime() - now) / DAY_MS));
 }
 
 /** "Oct 5" within the current year, "Dec 28, 2025" otherwise. */

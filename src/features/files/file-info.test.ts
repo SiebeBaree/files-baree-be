@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { daysLeft, fileKind } from "./file-info";
+import { daysLeft, expiresAt, fileKind } from "./file-info";
 
 describe("fileKind", () => {
     it("groups by content type", () => {
@@ -13,18 +13,28 @@ describe("fileKind", () => {
     });
 });
 
-describe("daysLeft", () => {
+describe("expiresAt", () => {
     const uploadedAt = new Date("2026-10-05T12:00:00Z");
 
-    it("counts the full retention right after upload", () => {
-        expect(daysLeft(uploadedAt, uploadedAt.getTime())).toBe(90);
+    it("adds the retention from the key prefix", () => {
+        expect(expiresAt("30d/shot-b6f9ac.png", uploadedAt)).toEqual(new Date("2026-11-04T12:00:00Z"));
+        expect(expiresAt("90d/shot-b6f9ac.png", uploadedAt)).toEqual(new Date("2027-01-03T12:00:00Z"));
     });
 
+    it("never expires forever files or the unprefixed files no lifecycle rule matches", () => {
+        expect(expiresAt("forever/shot-b6f9ac.png", uploadedAt)).toBeUndefined();
+        expect(expiresAt("shot-b6f9ac.png", uploadedAt)).toBeUndefined();
+    });
+});
+
+describe("daysLeft", () => {
+    const expires = new Date("2026-11-04T12:00:00Z");
+
     it("rounds partial days up, so the last day reads 1 and not 0", () => {
-        expect(daysLeft(uploadedAt, new Date("2027-01-03T11:00:00Z").getTime())).toBe(1);
+        expect(daysLeft(expires, new Date("2026-11-04T11:00:00Z").getTime())).toBe(1);
     });
 
     it("never goes negative when the lifecycle rule runs late", () => {
-        expect(daysLeft(uploadedAt, new Date("2027-01-04T12:00:00Z").getTime())).toBe(0);
+        expect(daysLeft(expires, new Date("2026-11-05T12:00:00Z").getTime())).toBe(0);
     });
 });
